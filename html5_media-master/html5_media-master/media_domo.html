@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style type="text/css">
+			.playBtn,.muntedBtn,.soundBtn,.pause,.nextBtn{
+				width: 39px;
+				height: 39px;
+				margin-top: 10px;
+			}
+			.playBtn{
+				display: inline-block;
+				background: url(img/pause.png) no-repeat;
+			}
+			.muntedBtn{
+				display: inline-block;
+				background: url(img/sound.png) no-repeat;
+			}
+			.soundBtn{
+				display: inline-block;
+				background: url(img/mute.png) no-repeat;
+			}
+			.pause{
+				display: inline-block;
+				background: url(img/play.png)no-repeat;
+			}
+			.nextBtn{
+				display: inline-block;
+				float: right;
+				background: url(img/prev.jpg) no-repeat;
+			}
+			.range{
+				width: 100%;
+				height: 5px;
+				border-radius: 5px;
+				border:1px solid #CCCCCC;
+			}
+			.range:hover{
+				/*border: 2px solid green;*/
+				box-shadow:2px 2px 10px #ccc,-2px -4px 10px #ccc ;
+			}
+			.rangem{
+				display: block;
+				height: 100%;
+				width: 0%;
+				border-radius: 5px;
+				background: #a7cf4a;
+			}
+			input {
+				float: right;
+				margin-top: 20px;
+				margin-left: 20px;
+			}
+			#player1{
+				float: left;
+			}
+			
+		</style>
+	</head>
+	<body>
+		<div id="player1">
+			<video>
+				浏览器不支持！
+			</video>
+		</div>
+		
+	</body>
+	<script type="text/javascript">
+//	视频的路径
+		var arr = ["videos/萱萱 - 我是不是你最疼爱的人.mp3","videos/Beyond - 海阔天空.mp3"];
+		var Player = function(opt){
+			//接收并获取player这个div
+			this.box = document.querySelector(opt.box);
+			console.log(this.box);
+			//将路径地址付给src
+			this.src = opt.src;
+			//当前正在播放视频的索引
+			this.num = 0;
+//			this.playBtn = "";
+			//获取video标签
+			this.video = this.box.querySelector("video");
+			//获取视频播放时长
+			this.duration = 0;
+			this.moveTime =0;
+			this.init();
+			this.timer = null;
+		}
+		Player.prototype={
+			init : function(){
+				this.create();//初始化调用执行
+				this.random();
+				this.play();
+				this.change();
+				this.mutedFn();
+				this.nextFn();
+				this.end();
+				this.volumeFn();
+				this.dragTiao();
+			},
+//			创建控件按钮
+			create : function () {
+			//进度条
+				this.range = document.createElement("div");
+				this.rangem = document.createElement("span");
+				this.rangem.className = "rangem";
+				this.range.className = "range";
+				this.range.appendChild(this.rangem);
+				this.box.appendChild(this.range);
+				//创建播放、暂停按钮
+				this.playBtn = document.createElement("div");
+				this.playBtn.className="playBtn";
+				this.box.appendChild(this.playBtn);
+				this.muted = document.createElement("div");
+				this.muted.className="muntedBtn";
+				this.box.appendChild(this.muted);
+				
+				//创建音量条
+				this.volumeTiao = document.createElement("input");
+				this.volumeTiao.type = "range";
+				this.volumeTiao.max="100";
+				this.volumeTiao.min="0";
+				this.volumeTiao.step="1";
+				this.box.appendChild(this.volumeTiao);
+				//下一曲
+				this.nextBtn = document.createElement("div");
+				this.nextBtn.className="nextBtn";
+				this.box.appendChild(this.nextBtn);
+				
+			},
+//			随机播放的方法
+			random : function(){
+				this.num = Math.floor(Math.random()*this.src.length);
+			},
+//			给video标签添加链接或者改变链接
+			change : function(){
+				var that = this;
+				this.video.width="400";
+				this.video.src = this.src[this.num];	
+				this.video.oncanplay = function(){
+					//当视频加载完毕之后再获取总时长
+					that.duration = this.duration;
+					//获取初始音量值（0~1）
+					that.volumeInit = this.volume*100;
+					//获取音量后讲初始值给进度条
+					that.volumeTiao.value=that.volumeInit;
+				}
+			},
+			//点击播放或暂停的方法
+			play : function(){
+				//that接收一下this，防止与事件内的this进行冲突
+				var that = this;
+				this.playBtn.onclick = function(){
+					//判断当前视频是否是暂停状态，进行相应操作
+					if(that.video.paused){
+						that.video.play();
+						that.rangeFn();
+						this.className = 'pause';
+					}else{
+						that.video.pause();
+						this.className = 'playBtn';
+						clearInterval(that.timer);
+					}
+				}
+			},
+				//点击静音的方法
+			mutedFn : function(){
+				//判断当前是否是静音状态,如果静音，让它有声音，否则就静音
+				var that = this;
+				this.muted.onclick = function (){
+					if(that.video.muted){
+						//有声音
+						that.video.muted=false;
+						this.className="muntedBtn";
+					}else{
+						that.video.muted=true;
+						this.className="soundBtn";
+					}
+				}
+			},
+			end : function(){
+				var that = this;
+				this.video.onended = function(){
+//					当视频执行完毕后执行下一曲
+					that.nextEvent();
+				}
+			},
+			//下一曲
+			nextFn : function(){
+				var that = this;
+				this.nextBtn.onclick = function (){
+					//点击下一曲按钮的时候执行
+					that.nextEvent();
+				}
+			},
+			nextEvent : function (){
+				var that = this;
+				//当前视频索引+1；
+					that.num+=1;
+					//然后改变视频
+					if(that.num>=that.src.length){
+						that.num = 0;
+						that.rangeFn(); //+++++++++++++++++
+					}
+					that.change();
+					//让它自动播放
+					that.video.autoplay = true;
+			},
+			//进度条
+			rangeFn : function(){
+				var that = this;
+				//添加定时器监控视频播放的位置
+				this.timer = setInterval(function(){
+					var times = that.video.currentTime;
+					var n = times/that.duration*100;
+					that.rangem.style.width = n+"%";
+				},100);
+			},
+			//改变音量大小按钮
+			volumeFn : function(){
+				var that = this;
+				this.volumeTiao.onchange = function(){
+					//音量条值改变时修改声音大小
+					console.log(this.value);
+					//将修改的声音大小再赋值给视频音量属性
+					that.video.volume=this.value/100;
+				}
+			},
+			//点击进度条跳动播放的方法
+			dragTiao : function () {
+				var that = this;
+				this.range.onclick=function(event){
+//					clearInterval(that.timer);
+					//鼠标点击div某位置触发
+					//获取鼠标点击的位置
+					var celentX=event.offsetX;
+					console.log(celentX);
+					//获取span本身的宽度
+					var DivWidth = this.offsetWidth;
+						console.log(DivWidth);
+					var spanWidth= celentX/DivWidth*100;
+						console.log(spanWidth);
+					//让span到当前点击位置
+					that.rangem.style.width = spanWidth+"%";
+					that.video.currentTime=that.duration*spanWidth/100;	
+				}
+
+			}
+		}
+		window.onload=function(){
+			var player = new Player({
+			box:"#player1",
+			src:arr
+			})	
+		}
+	</script>
+</html>
